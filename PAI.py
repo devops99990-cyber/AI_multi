@@ -1,11 +1,11 @@
 #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
 
+import os
+import threading
 import streamlit as st
 import requests
 import itertools
 from fastapi import FastAPI, Query
-from fastapi.responses import JSONResponse
-import threading
 import uvicorn
 
 # --------------------------
@@ -21,16 +21,14 @@ MODELS = itertools.cycle([
     "mistralai/mistral-7b-instruct"
 ])
 
-API_KEY = "Bearer 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"  # ⚠️ Replace with your real key
+API_KEY = os.getenv("API_KEY", "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")
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
-
 HEADERS = {
     "Authorization": API_KEY,
     "HTTP-Referer": "http://localhost",
     "X-Title": "MyLocalAI-Web",
     "Content-Type": "application/json"
 }
-
 
 # --------------------------
 # 🧠 Ask AI Function
@@ -56,55 +54,41 @@ def ask_ai(question):
 
 
 # --------------------------
-# 🌐 FastAPI Setup (runs separately)
+# 🌐 Streamlit Web UI
 # --------------------------
-app = FastAPI(title="Local AI API")
+def run_streamlit():
+    st.set_page_config(page_title="Multi-Model AI Assistant", page_icon="🤖", layout="centered")
 
-@app.get("/ask")
-def api_ask(question: str = Query(..., description="Your question to the AI")):
-    """Example: http://localhost:8000/ask?question=Hello"""
+    st.title("🤖 Multi-Model AI Assistant")
+    st.markdown("### Free, fast & smart — powered by OpenRouter’s free AI models.")
+    question = st.text_area("📝 Ask me anything:", placeholder="e.g., Explain the solar system with a table...")
+
+    if st.button("🚀 Generate Answer"):
+        if not API_KEY or "your_api_key_here" in API_KEY:
+            st.error("⚠️ Please paste your valid OpenRouter API key in the code.")
+        elif question.strip() == "":
+            st.warning("Please enter a question.")
+        else:
+            with st.spinner("Thinking... 💭"):
+                answer = ask_ai(question)
+            st.markdown("---")
+            st.markdown(f"### 🤖 **Answer:**\n\n{answer}")
+
+
+# --------------------------
+# ⚙️ FastAPI (for direct access)
+# --------------------------
+api = FastAPI()
+
+@api.get("/api/ask")
+def api_ask(question: str = Query(..., description="Ask a question to the AI")):
     answer = ask_ai(question)
-    return JSONResponse({"question": question, "answer": answer})
-
-
-def run_fastapi():
-    uvicorn.run(app, host="0.0.0.0", port=8000)  # separate port for API
-
-
-# Run FastAPI in the background
-threading.Thread(target=run_fastapi, daemon=True).start()
+    return {"question": question, "answer": answer}
 
 
 # --------------------------
-# 💬 Streamlit UI
+# 🧩 Run both servers
 # --------------------------
-st.set_page_config(page_title="Multi-Model AI Assistant", page_icon="🤖", layout="centered")
-
-st.markdown("""
-    <style>
-        body {background-color: #0e1117; color: white;}
-        .stTextInput > div > div > input {background-color: #1c1f26; color: white; border-radius: 10px;}
-        .stButton>button {background-color: #0078ff; color: white; border-radius: 10px; padding: 10px 20px;}
-        .stMarkdown h1, h2, h3 {color: #00c4ff;}
-        footer {visibility: hidden;}
-    </style>
-""", unsafe_allow_html=True)
-
-st.title("🤖 Multi-Model AI Assistant")
-st.markdown("### Free, fast & smart — powered by OpenRouter’s free AI models.")
-
-question = st.text_area("📝 Ask me anything:", placeholder="e.g., Explain the solar system with a table...")
-
-if st.button("🚀 Generate Answer"):
-    if not API_KEY or "your_api_key_here" in API_KEY:
-        st.error("⚠️ Please paste your valid OpenRouter API key in the code.")
-    elif question.strip() == "":
-        st.warning("Please enter a question.")
-    else:
-        with st.spinner("Thinking... 💭"):
-            answer = ask_ai(question)
-        st.markdown("---")
-        st.markdown(f"### 🤖 **Answer:**\n\n{answer}")
-
-st.markdown("---")
-st.caption("💡 Tip: Type a question and hit **Enter** or click the button. Each request cycles through multiple free models automatically.")
+if __name__ == "__main__":
+    threading.Thread(target=lambda: os.system("streamlit run PAI.py --server.port=8501 --server.address=0.0.0.0"), daemon=True).start()
+    uvicorn.run(api, host="0.0.0.0", port=8000)
