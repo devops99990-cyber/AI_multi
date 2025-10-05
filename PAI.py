@@ -1,4 +1,4 @@
-#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
+#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
 
 import streamlit as st
 import requests
@@ -21,7 +21,7 @@ MODELS = itertools.cycle([
     "mistralai/mistral-7b-instruct"
 ])
 
-API_KEY = "Bearer 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"
+API_KEY = "Bearer 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"
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 HEADERS = {
@@ -110,4 +110,5 @@ if st.button("🚀 Generate Answer"):
 
 st.markdown("---")
 st.caption("💡 Tip: Type a question or use the link → http://localhost:8010/ask?question=Hello")
+
 
